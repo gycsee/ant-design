@@ -1,29 +1,42 @@
-import React from 'react';
+import * as React from 'react';
 import Notification from 'rc-notification';
 import Icon from '../icon';
 
 let defaultDuration = 3;
-let defaultTop;
-let messageInstance;
+let defaultTop: number;
+let messageInstance: any;
 let key = 1;
 let prefixCls = 'ant-message';
-let getContainer;
+let transitionName = 'move-up';
+let getContainer: () => HTMLElement;
+let maxCount: number;
 
-function getMessageInstance() {
-  messageInstance = messageInstance || Notification.newInstance({
-      prefixCls,
-      transitionName: 'move-up',
-      style: { top: defaultTop }, // 覆盖原来的样式
-      getContainer,
-    });
-  return messageInstance;
+function getMessageInstance(callback: (i: any) => void) {
+  if (messageInstance) {
+    callback(messageInstance);
+    return;
+  }
+  Notification.newInstance({
+    prefixCls,
+    transitionName,
+    style: { top: defaultTop }, // 覆盖原来的样式
+    getContainer,
+    maxCount,
+  }, (instance: any) => {
+    if (messageInstance) {
+      callback(messageInstance);
+      return;
+    }
+    messageInstance = instance;
+    callback(instance);
+  });
 }
 
 type NoticeType = 'info' | 'success' | 'error' | 'warning' | 'loading';
 
 function notice(
   content: React.ReactNode,
-  duration: number = defaultDuration,
+  duration: (() => void) | number = defaultDuration,
   type: NoticeType,
   onClose?: () => void,
 ) {
@@ -35,29 +48,35 @@ function notice(
     loading: 'loading',
   })[type];
 
-  let instance = getMessageInstance();
-  instance.notice({
-    key,
-    duration,
-    style: {},
-    content: (
-      <div className={`${prefixCls}-custom-content ${prefixCls}-${type}`}>
-        <Icon type={iconType} />
-        <span>{content}</span>
-      </div>
-    ),
-    onClose,
+  if (typeof duration === 'function') {
+    onClose = duration;
+    duration = defaultDuration;
+  }
+
+  const target = key++;
+  getMessageInstance((instance) => {
+    instance.notice({
+      key: target,
+      duration,
+      style: {},
+      content: (
+        <div className={`${prefixCls}-custom-content ${prefixCls}-${type}`}>
+          <Icon type={iconType} />
+          <span>{content}</span>
+        </div>
+      ),
+      onClose,
+    });
   });
-  return (function () {
-    let target = key++;
-    return function () {
-      instance.removeNotice(target);
-    };
-  }());
+  return () => {
+    if (messageInstance) {
+      messageInstance.removeNotice(target);
+    }
+  };
 }
 
 type ConfigContent = React.ReactNode | string;
-type ConfigDuration = number;
+type ConfigDuration = number | (() => void);
 export type ConfigOnClose = () => void;
 
 export interface ConfigOptions {
@@ -65,6 +84,8 @@ export interface ConfigOptions {
   duration?: number;
   prefixCls?: string;
   getContainer?: () => HTMLElement;
+  transitionName?: string;
+  maxCount?: number;
 }
 
 export default {
@@ -100,6 +121,14 @@ export default {
     }
     if (options.getContainer !== undefined) {
       getContainer = options.getContainer;
+    }
+    if (options.transitionName !== undefined) {
+      transitionName = options.transitionName;
+      messageInstance = null; // delete messageInstance for new transitionName
+    }
+    if (options.maxCount !== undefined) {
+      maxCount = options.maxCount;
+      messageInstance = null;
     }
   },
   destroy() {

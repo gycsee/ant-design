@@ -2,12 +2,19 @@ import React from 'react';
 import { mount } from 'enzyme';
 import Card from '../index';
 
-const delay = timeout => new Promise(resolve => setTimeout(resolve, timeout));
 const testMethod = typeof window !== 'undefined' ? it : xit;
 
 describe('Card', () => {
+  beforeAll(() => {
+    jest.useFakeTimers();
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   function fakeResizeWindowTo(wrapper, width) {
-    Object.defineProperties(wrapper.node.container, {
+    Object.defineProperties(wrapper.instance().container, {
       offsetWidth: {
         get() { return width; },
         configurable: true,
@@ -16,13 +23,20 @@ describe('Card', () => {
     window.resizeTo(width);
   }
 
-  testMethod('resize card will trigger different padding', async () => {
+  testMethod('resize card will trigger different padding', () => {
     const wrapper = mount(<Card title="xxx">xxx</Card>);
     fakeResizeWindowTo(wrapper, 1000);
-    await delay(0);
-    expect(wrapper.hasClass('ant-card-wider-padding')).toBe(true);
+    jest.runAllTimers();
+    wrapper.update();
+    expect(wrapper.find('.ant-card-wider-padding').length).toBe(1);
     fakeResizeWindowTo(wrapper, 800);
-    await delay(0);
-    expect(wrapper.hasClass('ant-card-wider-padding')).toBe(false);
+    jest.runAllTimers();
+    wrapper.update();
+    expect(wrapper.find('.ant-card-wider-padding').length).toBe(0);
+  });
+
+  it('should still have padding when card which set padding to 0 is loading', () => {
+    const wrapper = mount(<Card loading bodyStyle={{ padding: 0 }}>xxx</Card>);
+    expect(wrapper.render()).toMatchSnapshot();
   });
 });

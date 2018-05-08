@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import Button from '../button';
 import { ButtonGroupProps } from '../button/button-group';
 import Icon from '../icon';
@@ -9,7 +9,7 @@ const ButtonGroup = Button.Group;
 export interface DropdownButtonProps extends ButtonGroupProps, DropDownProps {
   type?: 'primary' | 'ghost' | 'dashed';
   disabled?: boolean;
-  onClick?: React.MouseEventHandler<any>;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
   children?: any;
 }
 
@@ -31,6 +31,7 @@ export default class DropdownButton extends React.Component<DropdownButtonProps,
     const dropdownProps = {
       align,
       overlay,
+      disabled,
       trigger: disabled ? [] : trigger,
       onVisibleChange,
       placement,
@@ -53,7 +54,7 @@ export default class DropdownButton extends React.Component<DropdownButtonProps,
           {children}
         </Button>
         <Dropdown {...dropdownProps}>
-          <Button type={type} disabled={disabled}>
+          <Button type={type}>
             <Icon type="down" />
           </Button>
         </Dropdown>
